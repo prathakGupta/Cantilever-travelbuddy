@@ -17,12 +17,12 @@ const register = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Create user
+    // Create user with GeoJSON Point default coordinates
     user = new User({
       name,
       email,
       password: hashedPassword,
-      coordinates: [0, 0]
+      coordinates: { type: 'Point', coordinates: [0, 0] }
     });
 
     await user.save();

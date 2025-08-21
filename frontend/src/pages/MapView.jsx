@@ -20,6 +20,40 @@ function MapView() {
     getUserLocation();
   }, []);
 
+  // Update markers whenever nearbyUsers or map changes
+  useEffect(() => {
+    if (!map) return;
+    // Clear existing markers
+    markers.forEach((m) => m.setMap(null));
+
+    const newMarkers = nearbyUsers
+      .map((user) => {
+        const coords = user?.coordinates?.coordinates;
+        if (coords && coords[0] !== 0 && coords[1] !== 0) {
+          return new google.maps.Marker({
+            position: { lat: coords[1], lng: coords[0] },
+            map,
+            title: user.name,
+            icon: {
+              url:
+                "data:image/svg+xml;charset=UTF-8," +
+                encodeURIComponent(`
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="10" cy="10" r="6" fill="#10B981" stroke="white" stroke-width="2"/>
+                    <path d="M10 4a6 6 0 0 1 6 6c0 3.314-2.686 6-6 6s-6-2.686-6-6a6 6 0 0 1 6-6z" fill="#10B981"/>
+                  </svg>
+                `),
+              scaledSize: new google.maps.Size(20, 20),
+            },
+          });
+        }
+        return null;
+      })
+      .filter(Boolean);
+
+    setMarkers(newMarkers);
+  }, [map, nearbyUsers]);
+
   const getUserLocation = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -52,7 +86,7 @@ function MapView() {
 
   const fetchNearbyUsers = async (lat, lng) => {
     try {
-      const response = await userAPI.getNearbyUsers(lat, lng);
+      const response = await userAPI.getNearbyUsers({ lat, lng });
       setNearbyUsers(response.data);
     } catch (err) {
       console.error("Failed to fetch nearby users:", err);
@@ -102,26 +136,29 @@ function MapView() {
         },
       });
 
-      // Add nearby users markers
-      const userMarkers = nearbyUsers.map((user) => {
-        if (user.coordinates && user.coordinates[0] !== 0 && user.coordinates[1] !== 0) {
-          return new google.maps.Marker({
-            position: { lat: user.coordinates[0], lng: user.coordinates[1] },
-            map: mapInstance,
-            title: user.name,
-            icon: {
-              url: "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(`
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="10" cy="10" r="6" fill="#10B981" stroke="white" stroke-width="2"/>
-                  <path d="M10 4a6 6 0 0 1 6 6c0 3.314-2.686 6-6 6s-6-2.686-6-6a6 6 0 0 1 6-6z" fill="#10B981"/>
-                </svg>
-              `),
-              scaledSize: new google.maps.Size(20, 20),
-            },
-          });
-        }
-        return null;
-      }).filter(Boolean);
+      // Add nearby users markers (using GeoJSON [lng, lat])
+      const userMarkers = nearbyUsers
+        .map((user) => {
+          const coords = user?.coordinates?.coordinates;
+          if (coords && coords[0] !== 0 && coords[1] !== 0) {
+            return new google.maps.Marker({
+              position: { lat: coords[1], lng: coords[0] },
+              map: mapInstance,
+              title: user.name,
+              icon: {
+                url: "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(`
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="10" cy="10" r="6" fill="#10B981" stroke="white" stroke-width="2"/>
+                    <path d="M10 4a6 6 0 0 1 6 6c0 3.314-2.686 6-6 6s-6-2.686-6-6a6 6 0 0 1 6-6z" fill="#10B981"/>
+                  </svg>
+                `),
+                scaledSize: new google.maps.Size(20, 20),
+              },
+            });
+          }
+          return null;
+        })
+        .filter(Boolean);
 
       setMarkers(userMarkers);
     } catch (err) {
@@ -244,14 +281,18 @@ function MapView() {
                             {user.name}
                           </h4>
                           <p className="text-sm text-gray-600">
-                            {user.coordinates && user.coordinates[0] !== 0 && user.coordinates[1] !== 0
-                              ? `${calculateDistance(
+                            {(() => {
+                              const coords = user?.coordinates?.coordinates;
+                              if (coords && coords[0] !== 0 && coords[1] !== 0) {
+                                return `${calculateDistance(
                                   userLocation?.lat || 0,
                                   userLocation?.lng || 0,
-                                  user.coordinates[0],
-                                  user.coordinates[1]
-                                ).toFixed(1)} km away`
-                              : "Location not available"}
+                                  coords[1],
+                                  coords[0]
+                                ).toFixed(1)} km away`;
+                              }
+                              return "Location not available";
+                            })()}
                           </p>
                         </div>
                         <button
