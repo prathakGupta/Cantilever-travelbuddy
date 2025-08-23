@@ -38,10 +38,17 @@ function UserSearch() {
     setSearchPerformed(true);
 
     try {
-      const response = await userAPI.searchUsers(searchTerm);
+      console.log('Searching for users with term:', searchTerm);
+      const searchParams = { q: searchTerm };
+      console.log('Search parameters:', searchParams);
+      
+      const response = await userAPI.searchUsers(searchParams);
+      console.log('Search response:', response);
       setUsers(response.data);
     } catch (err) {
       console.error("Failed to search users:", err);
+      console.error("Error response:", err.response?.data);
+      console.error("Error status:", err.response?.status);
       setUsers([]);
     } finally {
       setLoading(false);

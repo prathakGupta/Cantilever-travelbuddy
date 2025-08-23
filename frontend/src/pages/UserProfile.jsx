@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { userAPI } from "../services/api";
+import { authAPI } from "../services/api";
 import Navigation from "../components/Navigation";
 
 function UserProfile() {
@@ -13,7 +13,7 @@ function UserProfile() {
     bio: "",
     interests: [],
     location: "",
-    coordinates: [0, 0],
+    coordinates: { type: "Point", coordinates: [0, 0] },
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -27,7 +27,9 @@ function UserProfile() {
         bio: user.bio || "",
         interests: user.interests || [],
         location: user.location || "",
-        coordinates: user.coordinates || [0, 0],
+        coordinates: user.coordinates && user.coordinates.coordinates
+          ? { type: "Point", coordinates: user.coordinates.coordinates }
+          : { type: "Point", coordinates: [0, 0] },
       });
       setLoading(false);
     }
@@ -37,13 +39,11 @@ function UserProfile() {
     e.preventDefault();
     setSaving(true);
     setMessage("");
-
     try {
-      const response = await userAPI.updateProfile(profile);
+      const response = await authAPI.updateProfile(profile);
       setUser(response.data);
+      sessionStorage.setItem("user", JSON.stringify(response.data));
       setMessage("Profile updated successfully!");
-      
-      // Clear message after 3 seconds
       setTimeout(() => setMessage(""), 3000);
     } catch (err) {
       setMessage(err.response?.data?.message || "Failed to update profile");
@@ -68,7 +68,10 @@ function UserProfile() {
           const { latitude, longitude } = position.coords;
           setProfile(prev => ({
             ...prev,
-            coordinates: [latitude, longitude]
+            coordinates: {
+              ...prev.coordinates,
+              coordinates: [latitude, longitude]
+            }
           }));
         },
         (error) => {
@@ -193,10 +196,13 @@ function UserProfile() {
                 <div className="flex space-x-2">
                   <input
                     type="number"
-                    value={profile.coordinates[0]}
+                    value={profile.coordinates.coordinates[0]}
                     onChange={(e) => setProfile({
                       ...profile,
-                      coordinates: [parseFloat(e.target.value) || 0, profile.coordinates[1]]
+                      coordinates: {
+                        ...profile.coordinates,
+                        coordinates: [parseFloat(e.target.value) || 0, profile.coordinates.coordinates[1]]
+                      }
                     })}
                     className="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Latitude"
@@ -204,10 +210,13 @@ function UserProfile() {
                   />
                   <input
                     type="number"
-                    value={profile.coordinates[1]}
+                    value={profile.coordinates.coordinates[1]}
                     onChange={(e) => setProfile({
                       ...profile,
-                      coordinates: [profile.coordinates[0], parseFloat(e.target.value) || 0]
+                      coordinates: {
+                        ...profile.coordinates,
+                        coordinates: [profile.coordinates.coordinates[0], parseFloat(e.target.value) || 0]
+                      }
                     })}
                     className="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Longitude"

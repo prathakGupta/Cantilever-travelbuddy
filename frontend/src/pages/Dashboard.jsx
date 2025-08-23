@@ -45,13 +45,14 @@ function Dashboard() {
   useEffect(() => {
     if (activities.length > 0) {
       const myActivities = activities.filter(
-        (activity) => activity.creator._id === user.id
+        (activity) => activity.creator._id === user._id
       ).length;
       const joinedActivities = activities.filter(
         (activity) =>
-          activity.participants.some((p) => p._id === user.id) &&
-          activity.creator._id !== user.id
+          activity.participants.some((p) => p._id === user._id) &&
+          activity.creator._id !== user._id
       ).length;
+      
       setStats({
         totalActivities: activities.length,
         myActivities,
@@ -66,6 +67,14 @@ function Dashboard() {
       setActivities(response.data);
     } catch (err) {
       console.error("Failed to fetch activities:", err);
+      
+      if (err.response?.status === 401) {
+        console.error("Authentication failed - redirecting to login");
+        sessionStorage.removeItem('token');
+        sessionStorage.removeItem('user');
+        setUser(null);
+        navigate('/login');
+      }
     } finally {
       setLoading(false);
     }
@@ -73,19 +82,25 @@ function Dashboard() {
 
   const fetchCategories = async () => {
     try {
+      console.log("Fetching categories...");
       const response = await activityAPI.getCategories();
+      console.log("Categories response:", response.data);
       setCategories(response.data);
     } catch (err) {
       console.error("Failed to fetch categories:", err);
+      console.error("Categories error response:", err.response?.data);
     }
   };
 
   const fetchUnreadNotifications = async () => {
     try {
+      console.log("Fetching unread notifications...");
       const response = await notificationAPI.getUnreadCount();
+      console.log("Notifications response:", response.data);
       setUnreadNotifications(response.data.count);
     } catch (err) {
       console.error("Failed to fetch unread notifications:", err);
+      console.error("Notifications error response:", err.response?.data);
     }
   };
 
@@ -142,11 +157,11 @@ function Dashboard() {
   };
 
   const isParticipant = (activity) => {
-    return activity.participants.some((p) => p._id === user.id);
+    return activity.participants.some((p) => p._id === user._id);
   };
 
   const isCreator = (activity) => {
-    return activity.creator._id === user.id;
+    return activity.creator._id === user._id;
   };
 
   const filteredActivities = activities.filter((activity) => {

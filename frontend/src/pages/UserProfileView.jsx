@@ -9,7 +9,7 @@ function UserProfileView() {
   const { user: currentUser } = useAuth();
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
-  const [activities, setActivities] = useState([]);
+  const [activities, setActivities] = useState({ created: [], joined: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [isFollowing, setIsFollowing] = useState(false);
@@ -24,7 +24,7 @@ function UserProfileView() {
 
   const fetchUserProfile = async () => {
     try {
-      const response = await userAPI.getProfile(id);
+      const response = await userAPI.getUserProfile(id);
       setUser(response.data);
     } catch (err) {
       console.error("Failed to fetch user profile:", err);
@@ -36,7 +36,7 @@ function UserProfileView() {
 
   const fetchUserActivities = async () => {
     try {
-      const response = await activityAPI.getMyActivities(id);
+      const response = await activityAPI.getUserActivities(id);
       setActivities(response.data);
     } catch (err) {
       console.error("Failed to fetch user activities:", err);
@@ -73,7 +73,7 @@ function UserProfileView() {
     }
   };
 
-  const isOwnProfile = () => currentUser?.id === id;
+  const isOwnProfile = () => currentUser?._id === id;
 
   if (loading) {
     return (
@@ -192,7 +192,7 @@ function UserProfileView() {
           <div className="grid md:grid-cols-4 gap-6 pt-6 border-t border-gray-200">
             <div className="text-center">
               <div className="text-2xl font-bold text-blue-600 mb-1">
-                {activities.length}
+                {activities.created.length + activities.joined.length}
               </div>
               <div className="text-sm text-gray-600">Activities</div>
             </div>
@@ -237,19 +237,129 @@ function UserProfileView() {
         {/* Activities Section */}
         <div className="bg-white rounded-lg shadow-sm p-6">
           <h3 className="text-xl font-semibold text-gray-900 mb-4">
-            Activities by {user.name} ({activities.length})
+            Activities by {user.name}
           </h3>
-          
-          {activities.length === 0 ? (
+
+          {/* Created Activities */}
+          {activities.created && activities.created.length > 0 && (
+            <div className="mb-8">
+              <h4 className="text-lg font-semibold mb-2">Created Activities</h4>
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {activities.created.map((activity) => (
+                  <div
+                    key={activity._id}
+                    className="border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow cursor-pointer"
+                    onClick={() => navigate(`/activity/${activity._id}`)}
+                  >
+                    <h4 className="font-bold text-lg text-gray-900 mb-2">
+                      {activity.title}
+                    </h4>
+                    <p className="text-gray-600 mb-3 line-clamp-2">
+                      {activity.description}
+                    </p>
+                    <div className="space-y-2 mb-3">
+                      <div className="flex items-center text-sm text-gray-500">
+                        <span className="mr-2">📍</span>
+                        {activity.location}
+                      </div>
+                      <div className="flex items-center text-sm text-gray-500">
+                        <span className="mr-2">📅</span>
+                        {new Date(activity.time).toLocaleDateString()}
+                      </div>
+                      <div className="flex items-center text-sm text-gray-500">
+                        <span className="mr-2">👥</span>
+                        {activity.participants.length}/{activity.participantLimit} participants
+                      </div>
+                    </div>
+                    {activity.tags && activity.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {activity.tags.slice(0, 3).map((tag, index) => (
+                          <span
+                            key={index}
+                            className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded"
+                          >
+                            #{tag}
+                          </span>
+                        ))}
+                        {activity.tags.length > 3 && (
+                          <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">
+                            +{activity.tags.length - 3} more
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Joined Activities */}
+          {activities.joined && activities.joined.length > 0 && (
+            <div>
+              <h4 className="text-lg font-semibold mb-2">Joined Activities</h4>
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {activities.joined.map((activity) => (
+                  <div
+                    key={activity._id}
+                    className="border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow cursor-pointer"
+                    onClick={() => navigate(`/activity/${activity._id}`)}
+                  >
+                    <h4 className="font-bold text-lg text-gray-900 mb-2">
+                      {activity.title}
+                    </h4>
+                    <p className="text-gray-600 mb-3 line-clamp-2">
+                      {activity.description}
+                    </p>
+                    <div className="space-y-2 mb-3">
+                      <div className="flex items-center text-sm text-gray-500">
+                        <span className="mr-2">📍</span>
+                        {activity.location}
+                      </div>
+                      <div className="flex items-center text-sm text-gray-500">
+                        <span className="mr-2">📅</span>
+                        {new Date(activity.time).toLocaleDateString()}
+                      </div>
+                      <div className="flex items-center text-sm text-gray-500">
+                        <span className="mr-2">👥</span>
+                        {activity.participants.length}/{activity.participantLimit} participants
+                      </div>
+                    </div>
+                    {activity.tags && activity.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {activity.tags.slice(0, 3).map((tag, index) => (
+                          <span
+                            key={index}
+                            className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded"
+                          >
+                            #{tag}
+                          </span>
+                        ))}
+                        {activity.tags.length > 3 && (
+                          <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">
+                            +{activity.tags.length - 3} more
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* If no activities at all */}
+          {(!activities.created || activities.created.length === 0) &&
+           (!activities.joined || activities.joined.length === 0) && (
             <div className="text-center py-12">
               <div className="text-6xl mb-4">🎯</div>
               <h4 className="text-lg font-semibold text-gray-600 mb-2">
                 No activities yet
               </h4>
               <p className="text-gray-500 mb-4">
-                {isOwnProfile() 
-                  ? "You haven't created any activities yet. Start by creating your first one!"
-                  : `${user.name} hasn't created any activities yet.`}
+                {isOwnProfile()
+                  ? "You haven't created or joined any activities yet. Start by creating your first one!"
+                  : `${user.name} hasn't created or joined any activities yet.`}
               </p>
               {isOwnProfile() && (
                 <button
@@ -259,56 +369,6 @@ function UserProfileView() {
                   Create Activity
                 </button>
               )}
-            </div>
-          ) : (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {activities.map((activity) => (
-                <div
-                  key={activity._id}
-                  className="border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow cursor-pointer"
-                  onClick={() => navigate(`/activity/${activity._id}`)}
-                >
-                  <h4 className="font-bold text-lg text-gray-900 mb-2">
-                    {activity.title}
-                  </h4>
-                  <p className="text-gray-600 mb-3 line-clamp-2">
-                    {activity.description}
-                  </p>
-                  
-                  <div className="space-y-2 mb-3">
-                    <div className="flex items-center text-sm text-gray-500">
-                      <span className="mr-2">📍</span>
-                      {activity.location}
-                    </div>
-                    <div className="flex items-center text-sm text-gray-500">
-                      <span className="mr-2">📅</span>
-                      {new Date(activity.time).toLocaleDateString()}
-                    </div>
-                    <div className="flex items-center text-sm text-gray-500">
-                      <span className="mr-2">👥</span>
-                      {activity.participants.length}/{activity.participantLimit} participants
-                    </div>
-                  </div>
-                  
-                  {activity.tags && activity.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      {activity.tags.slice(0, 3).map((tag, index) => (
-                        <span
-                          key={index}
-                          className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded"
-                        >
-                          #{tag}
-                        </span>
-                      ))}
-                      {activity.tags.length > 3 && (
-                        <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">
-                          +{activity.tags.length - 3} more
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))}
             </div>
           )}
         </div>

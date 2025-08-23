@@ -37,7 +37,7 @@ const register = async (req, res) => {
     res.status(201).json({
       token,
       user: {
-        id: user._id,
+        _id: user._id,
         name: user.name,
         email: user.email
       }
@@ -75,7 +75,7 @@ const login = async (req, res) => {
     res.json({
       token,
       user: {
-        id: user._id,
+        _id: user._id,
         name: user.name,
         email: user.email
       }
@@ -103,9 +103,13 @@ const getProfile = async (req, res) => {
 // Update user profile
 const updateProfile = async (req, res) => {
   try {
+    console.log("Received profile update:", req.body);
     const updates = req.body;
     delete updates.password; // Don't allow password update here
-    
+
+    const userBefore = await User.findById(req.user.userId);
+    console.log("User before update:", userBefore);
+
     const user = await User.findByIdAndUpdate(
       req.user.userId,
       updates,
@@ -113,13 +117,15 @@ const updateProfile = async (req, res) => {
     ).select('-password');
 
     if (!user) {
+      console.log("User not found for update:", req.user.userId);
       return res.status(404).json({ message: 'User not found' });
     }
 
+    console.log("Updated user:", user);
     res.json(user);
   } catch (err) {
     console.error('Update profile error:', err);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
 
@@ -193,6 +199,8 @@ const getNearbyUsers = async (req, res) => {
 const searchUsers = async (req, res) => {
   try {
     const { q, location, interests } = req.query;
+    console.log('Search query parameters:', { q, location, interests });
+    
     let query = { _id: { $ne: req.user.userId } };
 
     if (q) {
@@ -211,7 +219,11 @@ const searchUsers = async (req, res) => {
       query.interests = { $in: interestsArray };
     }
 
+    console.log('Final search query:', JSON.stringify(query, null, 2));
+
     const users = await User.find(query).select('name bio location interests');
+    console.log(`Found ${users.length} users matching search criteria`);
+    
     res.json(users);
   } catch (err) {
     console.error('Search users error:', err);
@@ -275,6 +287,43 @@ const unfollowUser = async (req, res) => {
   }
 };
 
+// Get user profile by ID
+const getUserProfile = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    const user = await User.findById(userId)
+      .select('name bio location interests profilePicture followers following isPublic')
+      .populate('followers', 'name')
+      .populate('following', 'name');
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (!user.isPublic && userId !== req.user.userId) {
+      return res.status(403).json({ message: 'Profile is private' });
+    }
+
+    res.json(user);
+  } catch (err) {
+    console.error('Get user profile error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// Debug: Get all users (for troubleshooting)
+const getAllUsers = async (req, res) => {
+  try {
+    const users = await User.find({}).select('name bio location interests').limit(10);
+    console.log(`Found ${users.length} total users in database`);
+    res.json({ count: users.length, users });
+  } catch (err) {
+    console.error('Get all users error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 // Helper function to calculate distance between two points
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
   const R = 6371e3; // Earth's radius in meters
@@ -299,5 +348,7 @@ module.exports = {
   getNearbyUsers,
   searchUsers,
   followUser,
-  unfollowUser
+  unfollowUser,
+  getUserProfile,
+  getAllUsers
 };

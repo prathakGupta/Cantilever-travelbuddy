@@ -1,5 +1,6 @@
 const Activity = require('../models/activity.model');
 const User = require('../models/user.model');
+const mongoose = require('mongoose'); // Added for debug endpoint
 
 // Create activity
 const createActivity = async (req, res) => {
@@ -164,6 +165,31 @@ const getMyActivities = async (req, res) => {
   }
 };
 
+// Get activities for a specific user
+const getUserActivities = async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    
+    const created = await Activity.find({ creator: userId })
+      .populate('creator', 'name')
+      .populate('participants', 'name')
+      .sort({ createdAt: -1 });
+    
+    const joined = await Activity.find({
+      participants: userId,
+      creator: { $ne: userId }
+    })
+      .populate('creator', 'name')
+      .populate('participants', 'name')
+      .sort({ createdAt: -1 });
+    
+    res.json({ created, joined });
+  } catch (err) {
+    console.error('Get user activities error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 // Get categories
 const getCategories = async (req, res) => {
   try {
@@ -187,6 +213,57 @@ const getCategories = async (req, res) => {
   }
 };
 
+// Search activities
+const searchActivities = async (req, res) => {
+  try {
+    const { q, category, location, date } = req.query;
+    console.log('Activity search query parameters:', { q, category, location, date });
+    
+    let query = {};
+
+    if (q) {
+      query.$or = [
+        { title: { $regex: q, $options: 'i' } },
+        { description: { $regex: q, $options: 'i' } },
+        { tags: { $in: [new RegExp(q, 'i')] } }
+      ];
+    }
+
+    if (category && category !== 'all') {
+      query.category = category;
+    }
+
+    if (location) {
+      query.location = { $regex: location, $options: 'i' };
+    }
+
+    if (date) {
+      const searchDate = new Date(date);
+      const nextDay = new Date(searchDate);
+      nextDay.setDate(nextDay.getDate() + 1);
+      
+      query.time = {
+        $gte: searchDate,
+        $lt: nextDay
+      };
+    }
+
+    console.log('Final activity search query:', JSON.stringify(query, null, 2));
+
+    const activities = await Activity.find(query)
+      .populate('creator', 'name')
+      .populate('participants', 'name')
+      .sort({ time: 1 });
+
+    console.log(`Found ${activities.length} activities matching search criteria`);
+    
+    res.json(activities);
+  } catch (err) {
+    console.error('Search activities error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 module.exports = {
   createActivity,
   getActivities,
@@ -195,5 +272,7 @@ module.exports = {
   leaveActivity,
   deleteActivity,
   getMyActivities,
-  getCategories
+  getUserActivities,
+  getCategories,
+  searchActivities
 };

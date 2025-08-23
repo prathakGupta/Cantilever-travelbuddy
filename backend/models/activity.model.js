@@ -8,7 +8,7 @@ const activitySchema = new mongoose.Schema({
   category: { 
     type: String, 
     required: true,
-    enum: ['dinner', 'hiking', 'co-working', 'sightseeing', 'sports', 'cultural', 'nightlife', 'outdoor', 'indoor', 'other']
+    enum: ['dinner', 'hiking', 'coworking', 'sightseeing', 'sports', 'cultural', 'nightlife', 'outdoor', 'indoor', 'other']
   },
   tags: [{ type: String }],
   creator: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },

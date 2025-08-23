@@ -62,6 +62,8 @@ export const activityAPI = {
   leaveActivity: (id) => api.post(`/activities/${id}/leave`),
   deleteActivity: (id) => api.delete(`/activities/${id}`),
   getMyActivities: () => api.get('/activities/my-activities'),
+  getUserActivities: (userId) => api.get(`/activities/user/${userId}`),
+  searchActivities: (params) => api.get('/activities/search', { params }),
   getCategories: () => api.get('/activities/categories'),
 };
 

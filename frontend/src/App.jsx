@@ -13,6 +13,7 @@ import UserSearch from "./pages/UserSearch";
 import Notifications from "./pages/Notifications";
 import ActivityDetails from "./pages/ActivityDetails";
 import UserProfileView from "./pages/UserProfileView";
+import AuthSuccess from "./pages/AuthSuccess";
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/auth-success" element={<AuthSuccess />} />
             
             {/* Protected Routes */}
             <Route path="/dashboard" element={

@@ -22,7 +22,9 @@ function ActivityDetails() {
 
   const fetchActivity = async () => {
     try {
-      const response = await activityAPI.getActivityById(id);
+      console.log("Fetching activity with ID:", id);
+      const response = await activityAPI.getActivity(id);
+      console.log("Activity response:", response.data);
       setActivity(response.data);
     } catch (err) {
       console.error("Failed to fetch activity:", err);
@@ -71,11 +73,20 @@ function ActivityDetails() {
   };
 
   const isParticipant = () => {
-    return activity?.participants.some(p => p._id === user?.id);
+    console.log("Checking if user is participant:", {
+      userId: user?._id,
+      participants: activity?.participants,
+      participantIds: activity?.participants?.map(p => p._id)
+    });
+    return activity?.participants.some(p => p._id === user?._id);
   };
 
   const isCreator = () => {
-    return activity?.creator._id === user?.id;
+    console.log("Checking if user is creator:", {
+      userId: user?._id,
+      creatorId: activity?.creator?._id
+    });
+    return activity?.creator._id === user?._id;
   };
 
   const canJoin = () => {
@@ -311,8 +322,8 @@ function ActivityDetails() {
           </div>
           
           {showChat && (
-            <div className="border-t border-gray-200 pt-4">
-              <Chat activityId={id} />
+            <div className="mt-6">
+              <Chat activityId={id} user={user} />
             </div>
           )}
         </div>

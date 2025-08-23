@@ -13,9 +13,20 @@ function Login() {
     // If already authenticated, redirect
     const existingToken = sessionStorage.getItem("token");
     const existingUser = sessionStorage.getItem("user");
+    console.log("Checking existing auth:", { existingToken: !!existingToken, existingUser: !!existingUser });
+    
     if (existingToken && existingUser) {
-      navigate("/dashboard");
-      return;
+      try {
+        const userData = JSON.parse(existingUser);
+        console.log("Found existing user:", userData);
+        setUser(userData);
+        navigate("/dashboard");
+        return;
+      } catch (error) {
+        console.error("Error parsing existing user:", error);
+        sessionStorage.removeItem("user");
+        sessionStorage.removeItem("token");
+      }
     }
 
     // If redirected back with token/user in URL (edge cases)
@@ -36,24 +47,46 @@ function Login() {
 
     const errorParam = url.searchParams.get("error");
     if (errorParam) {
-      setError("Google sign-in failed. Please try again.");
+      if (errorParam === "google_auth_failed") {
+        setError("Google sign-in failed. Please try again or use email/password login.");
+      } else {
+        setError("Authentication failed. Please try again.");
+      }
     }
   }, [navigate, setUser]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      console.log("Attempting login with:", formData);
       const response = await authAPI.login(formData);
+      console.log("Login response:", response.data);
+      
+      // Ensure we have both token and user
+      if (!response.data.token || !response.data.user) {
+        throw new Error("Invalid response format from server");
+      }
+      
+      // Store in session storage
       sessionStorage.setItem("token", response.data.token);
       sessionStorage.setItem("user", JSON.stringify(response.data.user));
+      
+      // Update auth context
       setUser(response.data.user);
+      
+      console.log("Login successful, navigating to dashboard");
       navigate("/dashboard");
     } catch (err) {
+      console.error("Login error:", err);
       setError(err.response?.data?.message || "Login failed");
     }
   };
 
   const handleGoogleLogin = () => {
+    // Check if we're in development mode and show appropriate message
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Attempting Google OAuth login...');
+    }
     window.location.href = "http://localhost:5001/auth/google";
   };
 

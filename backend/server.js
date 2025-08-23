@@ -1,8 +1,11 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const connectDB = require('./config/database');
+const passport = require('./config/passport');
 const { createServer } = require('http');
 const { Server } = require('socket.io');
+const jwt = require('jsonwebtoken');
 
 // Import routes
 const userRoutes = require('./routes/userRoutes');
@@ -29,18 +32,46 @@ connectDB();
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use(passport.initialize());
 
 // Routes
-app.use('/api', userRoutes);
 app.use('/api/activities', activityRoutes);
+app.use('/api', userRoutes);
 app.use('/api/activities', chatRoutes);
 app.use('/api/notifications', notificationRoutes);
 
 // Google OAuth routes
-app.get('/auth/google', async (req, res) => {
-  // Google OAuth implementation
-  res.redirect('http://localhost:5173/auth-success');
-});
+app.get('/auth/google', 
+  passport.authenticate('google', { scope: ['profile', 'email'] })
+);
+
+app.get('/auth/google/callback', 
+  passport.authenticate('google', { session: false }),
+  async (req, res) => {
+    try {
+      // Generate JWT token
+      const token = jwt.sign(
+        { userId: req.user._id },
+        process.env.JWT_SECRET || 'your-secret-key',
+        { expiresIn: '7d' }
+      );
+
+      // Prepare user data
+      const userData = {
+        _id: req.user._id,
+        name: req.user.name,
+        email: req.user.email
+      };
+
+      // Redirect to frontend with token and user data
+      const redirectUrl = `http://localhost:5173/auth-success?token=${token}&user=${encodeURIComponent(JSON.stringify(userData))}`;
+      res.redirect(redirectUrl);
+    } catch (error) {
+      console.error('Google OAuth callback error:', error);
+      res.redirect('http://localhost:5173/login?error=google_auth_failed');
+    }
+  }
+);
 
 // Test endpoint
 app.get('/api/test', (req, res) => {

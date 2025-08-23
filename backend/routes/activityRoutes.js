@@ -9,17 +9,23 @@ const {
   leaveActivity,
   deleteActivity,
   getMyActivities,
-  getCategories
+  getCategories,
+  getUserActivities,
+  searchActivities
 } = require('../controllers/activityController');
 
 // All routes are protected
 router.use(auth);
 
-// Activity CRUD
+// Activity CRUD - Specific routes first
 router.post('/', createActivity);
 router.get('/', getActivities);
+router.get('/search', searchActivities);
 router.get('/categories', getCategories);
 router.get('/my-activities', getMyActivities);
+router.get('/user/:userId', getUserActivities);
+
+// Parameterized routes last
 router.get('/:id', getActivityById);
 router.post('/:id/join', joinActivity);
 router.post('/:id/leave', leaveActivity);
