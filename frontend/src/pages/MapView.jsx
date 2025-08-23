@@ -9,16 +9,36 @@ function MapView() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const mapRef = useRef(null);
+  const mapInstanceRef = useRef(null);
+  const markersRef = useRef([]);
   const [nearbyUsers, setNearbyUsers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [map, setMap] = useState(null);
-  const [markers, setMarkers] = useState([]);
   const [userLocation, setUserLocation] = useState(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
     getUserLocation();
+    return () => {
+      // Cleanup Google Maps instance and markers
+      if (markersRef.current.length > 0) {
+        markersRef.current.forEach(marker => marker.setMap(null));
+        markersRef.current = [];
+      }
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current = null;
+      }
+      if (mapRef.current) {
+        mapRef.current.innerHTML = "";
+      }
+    };
   }, []);
+
+  useEffect(() => {
+    if (userLocation && mapRef.current && !mapInstanceRef.current) {
+      initMap(userLocation.lat, userLocation.lng);
+    }
+    // eslint-disable-next-line
+  }, [userLocation, mapRef.current]);
 
   const getUserLocation = () => {
     if (navigator.geolocation) {
@@ -27,32 +47,27 @@ function MapView() {
           const { latitude, longitude } = position.coords;
           setUserLocation({ lat: latitude, lng: longitude });
           fetchNearbyUsers(latitude, longitude);
-          initMap(latitude, longitude);
         },
         (error) => {
           console.error("Geolocation error:", error);
-          // Fallback to default location (e.g., city center)
           const defaultLat = 40.7128;
-          const defaultLng = -74.0060;
+          const defaultLng = -74.006;
           setUserLocation({ lat: defaultLat, lng: defaultLng });
           fetchNearbyUsers(defaultLat, defaultLng);
-          initMap(defaultLat, defaultLng);
         }
       );
     } else {
       setError("Geolocation is not supported by this browser.");
-      // Fallback to default location
       const defaultLat = 40.7128;
-      const defaultLng = -74.0060;
+      const defaultLng = -74.006;
       setUserLocation({ lat: defaultLat, lng: defaultLng });
       fetchNearbyUsers(defaultLat, defaultLng);
-      initMap(defaultLat, defaultLng);
     }
   };
 
   const fetchNearbyUsers = async (lat, lng) => {
     try {
-      const response = await userAPI.getNearbyUsers(lat, lng);
+      const response = await userAPI.getNearbyUsers({ lat, lng });
       setNearbyUsers(response.data);
     } catch (err) {
       console.error("Failed to fetch nearby users:", err);
@@ -65,13 +80,11 @@ function MapView() {
   const initMap = async (lat, lng) => {
     try {
       const loader = new Loader({
-        apiKey: "AIzaSyB41DRuKWuJEnGdnL6vwp4FqtnTf098HhM",
+        apiKey: "AIzaSyBRdicAPldaOHwJDwCJyboULwyNdm6c-s4",
         version: "weekly",
         libraries: ["places"],
       });
-
       const { Map } = await loader.importLibrary("maps");
-      
       const mapInstance = new Map(mapRef.current, {
         center: { lat, lng },
         zoom: 12,
@@ -83,47 +96,51 @@ function MapView() {
           },
         ],
       });
-
-      setMap(mapInstance);
-
+      mapInstanceRef.current = mapInstance;
       // Add user's location marker
-      new google.maps.Marker({
+      const userMarker = new window.google.maps.Marker({
         position: { lat, lng },
         map: mapInstance,
         title: "Your Location",
         icon: {
-          url: "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(`
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="12" cy="12" r="8" fill="#3B82F6" stroke="white" stroke-width="2"/>
-              <circle cx="12" cy="12" r="3" fill="white"/>
+          url:
+            "data:image/svg+xml;charset=UTF-8," +
+            encodeURIComponent(`
+            <svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">
+              <circle cx=\"12\" cy=\"12\" r=\"8\" fill=\"#3B82F6\" stroke=\"white\" stroke-width=\"2\"/>
+              <circle cx=\"12\" cy=\"12\" r=\"3\" fill=\"white\"/>
             </svg>
           `),
-          scaledSize: new google.maps.Size(24, 24),
+          scaledSize: new window.google.maps.Size(24, 24),
         },
       });
-
+      markersRef.current.push(userMarker);
       // Add nearby users markers
-      const userMarkers = nearbyUsers.map((user) => {
-        if (user.coordinates && user.coordinates[0] !== 0 && user.coordinates[1] !== 0) {
-          return new google.maps.Marker({
+      nearbyUsers.forEach((user) => {
+        if (
+          user.coordinates &&
+          user.coordinates[0] !== 0 &&
+          user.coordinates[1] !== 0
+        ) {
+          const marker = new window.google.maps.Marker({
             position: { lat: user.coordinates[0], lng: user.coordinates[1] },
             map: mapInstance,
             title: user.name,
             icon: {
-              url: "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(`
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="10" cy="10" r="6" fill="#10B981" stroke="white" stroke-width="2"/>
-                  <path d="M10 4a6 6 0 0 1 6 6c0 3.314-2.686 6-6 6s-6-2.686-6-6a6 6 0 0 1 6-6z" fill="#10B981"/>
+              url:
+                "data:image/svg+xml;charset=UTF-8," +
+                encodeURIComponent(`
+                <svg width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">
+                  <circle cx=\"10\" cy=\"10\" r=\"6\" fill=\"#10B981\" stroke=\"white\" stroke-width=\"2\"/>
+                  <path d=\"M10 4a6 6 0 0 1 6 6c0 3.314-2.686 6-6 6s-6-2.686-6-6a6 6 0 0 1 6-6z\" fill=\"#10B981\"/>
                 </svg>
               `),
-              scaledSize: new google.maps.Size(20, 20),
+              scaledSize: new window.google.maps.Size(20, 20),
             },
           });
+          markersRef.current.push(marker);
         }
-        return null;
-      }).filter(Boolean);
-
-      setMarkers(userMarkers);
+      });
     } catch (err) {
       console.error("Failed to initialize map:", err);
       setError("Failed to load map. Please check your internet connection.");
@@ -162,7 +179,6 @@ function MapView() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Navigation />
-      
       <div className="max-w-7xl mx-auto p-6">
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-gray-900 mb-2">
@@ -172,7 +188,6 @@ function MapView() {
             Find and connect with travelers and locals in your area.
           </p>
         </div>
-
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Map Section */}
           <div className="lg:col-span-2">
@@ -185,9 +200,8 @@ function MapView() {
                   Blue marker: Your location | Green markers: Nearby users
                 </p>
               </div>
-              
-              <div 
-                ref={mapRef} 
+              <div
+                ref={mapRef}
                 className="w-full h-96 rounded-lg border border-gray-200"
                 style={{ minHeight: "400px" }}
               >
@@ -202,14 +216,12 @@ function MapView() {
               </div>
             </div>
           </div>
-
           {/* Nearby Users List */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-lg shadow-sm p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
                 Nearby Users ({nearbyUsers.length})
               </h3>
-              
               {loading ? (
                 <div className="text-center py-8">
                   <div className="text-4xl mb-4">⏳</div>
@@ -244,7 +256,9 @@ function MapView() {
                             {user.name}
                           </h4>
                           <p className="text-sm text-gray-600">
-                            {user.coordinates && user.coordinates[0] !== 0 && user.coordinates[1] !== 0
+                            {user.coordinates &&
+                            user.coordinates[0] !== 0 &&
+                            user.coordinates[1] !== 0
                               ? `${calculateDistance(
                                   userLocation?.lat || 0,
                                   userLocation?.lng || 0,
@@ -271,7 +285,6 @@ function MapView() {
             </div>
           </div>
         </div>
-
         {/* Tips Section */}
         <div className="mt-8 bg-blue-50 rounded-lg p-6">
           <h3 className="text-lg font-semibold text-blue-900 mb-3">
@@ -284,11 +297,15 @@ function MapView() {
             </div>
             <div>
               <p className="font-medium mb-1">• Join activities</p>
-              <p>Create or join activities to meet people with similar interests.</p>
+              <p>
+                Create or join activities to meet people with similar interests.
+              </p>
             </div>
             <div>
               <p className="font-medium mb-1">• Be respectful</p>
-              <p>Always be polite and respectful when reaching out to others.</p>
+              <p>
+                Always be polite and respectful when reaching out to others.
+              </p>
             </div>
             <div>
               <p className="font-medium mb-1">• Stay safe</p>
@@ -301,9 +318,8 @@ function MapView() {
   );
 }
 
-// Helper function to calculate distance between two points
 function calculateDistance(lat1, lon1, lat2, lon2) {
-  const R = 6371; // Radius of the Earth in kilometers
+  const R = 6371;
   const dLat = (lat2 - lat1) * (Math.PI / 180);
   const dLon = (lon2 - lon1) * (Math.PI / 180);
   const a =

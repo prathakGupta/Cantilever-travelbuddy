@@ -12,14 +12,16 @@ function UserProfileView() {
   const [activities, setActivities] = useState({ created: [], joined: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [isFollowing, setIsFollowing] = useState(false);
-  const [followingCount, setFollowingCount] = useState(0);
-  const [followersCount, setFollowersCount] = useState(0);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  // Determine if current user is following this user
+  const isFollowing = user && user.followers && currentUser
+    ? user.followers.some(f => f._id === currentUser._id)
+    : false;
 
   useEffect(() => {
     fetchUserProfile();
     fetchUserActivities();
-    checkFollowStatus();
   }, [id]);
 
   const fetchUserProfile = async () => {
@@ -27,7 +29,6 @@ function UserProfileView() {
       const response = await userAPI.getUserProfile(id);
       setUser(response.data);
     } catch (err) {
-      console.error("Failed to fetch user profile:", err);
       setError("Failed to load user profile. Please try again.");
     } finally {
       setLoading(false);
@@ -39,37 +40,34 @@ function UserProfileView() {
       const response = await activityAPI.getUserActivities(id);
       setActivities(response.data);
     } catch (err) {
-      console.error("Failed to fetch user activities:", err);
-    }
-  };
-
-  const checkFollowStatus = async () => {
-    try {
-      // This would typically check if current user is following the profile user
-      // For now, we'll set it to false
-      setIsFollowing(false);
-    } catch (err) {
-      console.error("Failed to check follow status:", err);
+      // handle error if needed
     }
   };
 
   const handleFollow = async () => {
+    setIsProcessing(true);
     try {
       await userAPI.followUser(id);
-      setIsFollowing(true);
-      setFollowersCount(prev => prev + 1);
     } catch (err) {
-      console.error("Failed to follow user:", err);
+      // If already following, just proceed to refetch
+      if (err.response?.data?.message !== "Already following this user") {
+        console.error("Failed to follow user:", err);
+      }
+    } finally {
+      await fetchUserProfile();
+      setIsProcessing(false);
     }
   };
 
   const handleUnfollow = async () => {
+    setIsProcessing(true);
     try {
-      await userAPI.unfollowUser(user._id);
-      setIsFollowing(false);
-      setFollowersCount(prev => Math.max(0, prev - 1));
+      await userAPI.unfollowUser(id);
     } catch (err) {
-      console.error("Failed to unfollow user:", err);
+      // handle error if needed
+    } finally {
+      await fetchUserProfile();
+      setIsProcessing(false);
     }
   };
 
@@ -99,7 +97,9 @@ function UserProfileView() {
             <h3 className="text-xl font-semibold text-gray-600 mb-2">
               User not found
             </h3>
-            <p className="text-gray-500 mb-4">{error || "The user you're looking for doesn't exist."}</p>
+            <p className="text-gray-500 mb-4">
+              {error || "The user you're looking for doesn't exist."}
+            </p>
             <button
               onClick={() => navigate("/search")}
               className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
@@ -115,7 +115,7 @@ function UserProfileView() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Navigation />
-      
+
       <div className="max-w-6xl mx-auto p-6">
         {/* Back Button */}
         <button
@@ -145,29 +145,29 @@ function UserProfileView() {
                   </p>
                 )}
                 {user.bio && (
-                  <p className="text-gray-700 text-lg max-w-2xl">
-                    {user.bio}
-                  </p>
+                  <p className="text-gray-700 text-lg max-w-2xl">{user.bio}</p>
                 )}
               </div>
             </div>
-            
+
             {/* Action Buttons */}
             <div className="flex flex-col space-y-3">
               {!isOwnProfile() ? (
                 isFollowing ? (
                   <button
                     onClick={handleUnfollow}
-                    className="px-6 py-3 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+                    disabled={isProcessing}
+                    className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
                   >
-                    Unfollow
+                    {isProcessing ? "Processing..." : "Following"}
                   </button>
                 ) : (
                   <button
                     onClick={handleFollow}
-                    className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    disabled={isProcessing}
+                    className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
                   >
-                    Follow
+                    {isProcessing ? "Processing..." : "Follow"}
                   </button>
                 )
               ) : (
@@ -178,7 +178,6 @@ function UserProfileView() {
                   Edit Profile
                 </button>
               )}
-              
               <button
                 onClick={() => navigate("/map")}
                 className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
@@ -198,13 +197,13 @@ function UserProfileView() {
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-green-600 mb-1">
-                {followersCount}
+                {user.followers ? user.followers.length : 0}
               </div>
               <div className="text-sm text-gray-600">Followers</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-purple-600 mb-1">
-                {followingCount}
+                {user.following ? user.following.length : 0}
               </div>
               <div className="text-sm text-gray-600">Following</div>
             </div>
@@ -219,7 +218,9 @@ function UserProfileView() {
           {/* Interests */}
           {user.interests && user.interests.length > 0 && (
             <div className="mt-6 pt-6 border-t border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">Interests & Hobbies</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                Interests & Hobbies
+              </h3>
               <div className="flex flex-wrap gap-2">
                 {user.interests.map((interest, index) => (
                   <span
@@ -268,7 +269,8 @@ function UserProfileView() {
                       </div>
                       <div className="flex items-center text-sm text-gray-500">
                         <span className="mr-2">👥</span>
-                        {activity.participants.length}/{activity.participantLimit} participants
+                        {activity.participants.length}/
+                        {activity.participantLimit} participants
                       </div>
                     </div>
                     {activity.tags && activity.tags.length > 0 && (
@@ -322,7 +324,8 @@ function UserProfileView() {
                       </div>
                       <div className="flex items-center text-sm text-gray-500">
                         <span className="mr-2">👥</span>
-                        {activity.participants.length}/{activity.participantLimit} participants
+                        {activity.participants.length}/
+                        {activity.participantLimit} participants
                       </div>
                     </div>
                     {activity.tags && activity.tags.length > 0 && (
@@ -350,27 +353,27 @@ function UserProfileView() {
 
           {/* If no activities at all */}
           {(!activities.created || activities.created.length === 0) &&
-           (!activities.joined || activities.joined.length === 0) && (
-            <div className="text-center py-12">
-              <div className="text-6xl mb-4">🎯</div>
-              <h4 className="text-lg font-semibold text-gray-600 mb-2">
-                No activities yet
-              </h4>
-              <p className="text-gray-500 mb-4">
-                {isOwnProfile()
-                  ? "You haven't created or joined any activities yet. Start by creating your first one!"
-                  : `${user.name} hasn't created or joined any activities yet.`}
-              </p>
-              {isOwnProfile() && (
-                <button
-                  onClick={() => navigate("/dashboard")}
-                  className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  Create Activity
-                </button>
-              )}
-            </div>
-          )}
+            (!activities.joined || activities.joined.length === 0) && (
+              <div className="text-center py-12">
+                <div className="text-6xl mb-4">🎯</div>
+                <h4 className="text-lg font-semibold text-gray-600 mb-2">
+                  No activities yet
+                </h4>
+                <p className="text-gray-500 mb-4">
+                  {isOwnProfile()
+                    ? "You haven't created or joined any activities yet. Start by creating your first one!"
+                    : `${user.name} hasn't created or joined any activities yet.`}
+                </p>
+                {isOwnProfile() && (
+                  <button
+                    onClick={() => navigate("/dashboard")}
+                    className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Create Activity
+                  </button>
+                )}
+              </div>
+            )}
         </div>
 
         {/* Connection Section */}
@@ -382,7 +385,10 @@ function UserProfileView() {
             <div className="grid md:grid-cols-2 gap-4 text-sm text-blue-800">
               <div>
                 <p className="font-medium mb-1">• Join their activities</p>
-                <p>Participate in activities they create to get to know them better.</p>
+                <p>
+                  Participate in activities they create to get to know them
+                  better.
+                </p>
               </div>
               <div>
                 <p className="font-medium mb-1">• Send a message</p>

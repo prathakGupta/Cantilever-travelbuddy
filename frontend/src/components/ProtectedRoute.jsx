@@ -22,8 +22,8 @@ function ProtectedRoute({ children }) {
     return <Navigate to="/login" />;
   }
   
-  // Render protected content if authenticated
-  console.log("User authenticated:", user);
+  // // Render protected content if authenticated
+  // console.log("User authenticated:", user);
   return children;
 }
 
