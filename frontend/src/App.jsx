@@ -14,6 +14,7 @@ import Notifications from "./pages/Notifications";
 import ActivityDetails from "./pages/ActivityDetails";
 import UserProfileView from "./pages/UserProfileView";
 import AuthSuccess from "./pages/AuthSuccess";
+import ActivityEdit from "./pages/ActivityEdit";
 
 function App() {
   return (
@@ -61,6 +62,12 @@ function App() {
             <Route path="/activity/:id" element={
               <ProtectedRoute>
                 <ActivityDetails />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/activity/:id/edit" element={
+              <ProtectedRoute>
+                <ActivityEdit />
               </ProtectedRoute>
             } />
             

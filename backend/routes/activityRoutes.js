@@ -11,7 +11,8 @@ const {
   getMyActivities,
   getCategories,
   getUserActivities,
-  searchActivities
+  searchActivities,
+  updateActivity
 } = require('../controllers/activityController');
 
 // All routes are protected
@@ -24,6 +25,7 @@ router.get('/search', searchActivities);
 router.get('/categories', getCategories);
 router.get('/my-activities', getMyActivities);
 router.get('/user/:userId', getUserActivities);
+router.put('/:id', updateActivity);
 
 // Parameterized routes last
 router.get('/:id', getActivityById);

@@ -142,6 +142,35 @@ const deleteActivity = async (req, res) => {
   }
 };
 
+// Update activity
+const updateActivity = async (req, res) => {
+  try {
+    const activity = await Activity.findById(req.params.id);
+    // console.log('Update request for activity ID:', req.params.id);
+    if (!activity) {
+      return res.status(404).json({ message: 'Activity not found' });
+    }
+    if (activity.creator.toString() !== req.user.userId) {
+      return res.status(403).json({ message: 'Not authorized to update this activity' });
+    }
+    const { title, description, location, time, participantLimit, category, tags } = req.body;
+    activity.title = title;
+    activity.description = description;
+    activity.location = location;
+    activity.time = time;
+    activity.participantLimit = participantLimit;
+    activity.category = category;
+    activity.tags = tags;
+    await activity.save();
+    await activity.populate('creator', 'name');
+    await activity.populate('participants', 'name');
+    res.json(activity);
+  } catch (err) {
+    console.error('Update activity error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 // Get user's activities
 const getMyActivities = async (req, res) => {
   try {
@@ -274,5 +303,6 @@ module.exports = {
   getMyActivities,
   getUserActivities,
   getCategories,
-  searchActivities
+  searchActivities,
+  updateActivity
 };

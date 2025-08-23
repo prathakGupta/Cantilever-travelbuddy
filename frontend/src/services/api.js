@@ -65,6 +65,7 @@ export const activityAPI = {
   getUserActivities: (userId) => api.get(`/activities/user/${userId}`),
   searchActivities: (params) => api.get('/activities/search', { params }),
   getCategories: () => api.get('/activities/categories'),
+  updateActivity: (id, activityData) => api.put(`/activities/${id}`, activityData),
 };
 
 // Chat API calls
