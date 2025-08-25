@@ -51,4 +51,4 @@ The app will be available at [http://localhost:5173](http://localhost:5173).
 
 ## License
 
-MIT (or your license)
+This project is for educational/demo purposes and made during the internship period on Cantilever

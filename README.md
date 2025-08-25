@@ -78,4 +78,4 @@ See the respective `README.md` files in `backend/` and `frontend/` for details.
 
 ## License
 
-MIT (or your license)
+This project is for educational/demo purposes and made during the internship period on Cantilever

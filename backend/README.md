@@ -77,4 +77,4 @@ The API will be available at `http://localhost:5001/api`.
 
 ## License
 
-MIT (or your license)
+This project is for educational/demo purposes and made during the internship period on Cantilever
