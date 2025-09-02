@@ -19,10 +19,11 @@ const Notification = require('./models/notification.model');
 
 const app = express();
 const server = createServer(app);
+const allowedOrigin = process.env.CORS_ORIGIN || process.env.FRONTEND_URL || 'http://localhost:5173';
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5173",
-    methods: ["GET", "POST"]
+    origin: allowedOrigin,
+    methods: ["GET", "POST"],
   }
 });
 
@@ -30,7 +31,10 @@ const io = new Server(server, {
 connectDB();
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: allowedOrigin,
+  credentials: true,
+}));
 app.use(express.json());
 app.use(passport.initialize());
 
@@ -64,11 +68,13 @@ app.get('/auth/google/callback',
       };
 
       // Redirect to frontend with token and user data
-      const redirectUrl = `http://localhost:5173/auth-success?token=${token}&user=${encodeURIComponent(JSON.stringify(userData))}`;
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+      const redirectUrl = `${frontendUrl}/auth-success?token=${token}&user=${encodeURIComponent(JSON.stringify(userData))}`;
       res.redirect(redirectUrl);
     } catch (error) {
       console.error('Google OAuth callback error:', error);
-      res.redirect('http://localhost:5173/login?error=google_auth_failed');
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+      res.redirect(`${frontendUrl}/login?error=google_auth_failed`);
     }
   }
 );

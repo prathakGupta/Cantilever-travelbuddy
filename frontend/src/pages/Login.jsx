@@ -87,7 +87,9 @@ function Login() {
     if (process.env.NODE_ENV === 'development') {
       console.log('Attempting Google OAuth login...');
     }
-    window.location.href = "http://localhost:5001/auth/google";
+    const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api';
+    const oauthBase = apiBase.replace(/\/api$/, '');
+    window.location.href = `${oauthBase}/auth/google`;
   };
 
   return (

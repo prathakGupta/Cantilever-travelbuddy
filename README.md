@@ -79,3 +79,24 @@ See the respective `README.md` files in `backend/` and `frontend/` for details.
 ## License
 
 This project is for educational/demo purposes and made during the internship period on Cantilever
+
+---
+
+## Deployment (Docker Compose)
+
+Prerequisites: Docker + Docker Compose.
+
+```sh
+docker compose up --build
+```
+
+Services:
+- MongoDB: http://localhost:27017
+- Backend API: http://localhost:5001/api
+- Frontend (Nginx): http://localhost:5173
+
+Environment variables:
+- Backend: set `PORT`, `MONGODB_URI`, `JWT_SECRET`, `FRONTEND_URL`, `CORS_ORIGIN`, optionally Google OAuth vars.
+- Frontend: set `VITE_API_BASE_URL`, `VITE_SOCKET_URL` at build time.
+
+For production, point `FRONTEND_URL`, `CORS_ORIGIN`, `VITE_API_BASE_URL`, and `VITE_SOCKET_URL` to your domain(s).

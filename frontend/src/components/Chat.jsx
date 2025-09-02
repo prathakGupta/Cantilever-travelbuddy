@@ -29,7 +29,8 @@ function Chat({ activityId, user }) {
     fetchChatHistory();
     
     try {
-      const newSocket = io('http://localhost:5001');
+      const socketBaseUrl = import.meta.env.VITE_SOCKET_URL || (import.meta.env.VITE_API_BASE_URL ? import.meta.env.VITE_API_BASE_URL.replace(/\/api$/, '') : 'http://localhost:5001');
+      const newSocket = io(socketBaseUrl);
       setSocket(newSocket);
 
       // Join activity chat room
